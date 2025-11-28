@@ -42,6 +42,35 @@ $createdAt = Caster::dateTimeImmutable($payload['created_at']);
 If casting fails, a `CastException` is thrown with field context (when provided). Nullable variants
 (`nullableInt`, `nullableFloat`, …) treat `null` and whitespace-only strings as “empty”.
 
+### Strings and Booleans
+
+```php
+$slug = Caster::nonEmptyTrimmedString($payload['slug']);   // trims and rejects empty results
+$alias = Caster::nullableString($payload['alias'] ?? null); // ?string
+$flag = Caster::bool('Yes');                               // true
+$maybeFlag = Caster::tryBool('unknown');                   // null
+```
+
+### Date & Time
+
+```php
+$publishedAt = Caster::dateTimeImmutable('2024-01-01T10:00:00+00:00');
+$maybeExpires = Caster::nullableDateTimeImmutable(
+    $payload['expires_at'] ?? null,
+    'expires_at',
+    DATE_ATOM
+);
+```
+
+### Enums
+
+```php
+enum Status: string { case Draft = 'draft'; case Published = 'published'; }
+
+$status = Caster::enum(Status::class, 'draft');        // Status::Draft
+$maybeStatus = Caster::tryEnum(Status::class, 'oops'); // null
+```
+
 ## Soft `try*` Helpers
 
 When you prefer a nullable result over exceptions:
@@ -63,6 +92,7 @@ $payload = [
     'id' => '100',
     'name' => 'Alice',
     'meta' => ['role' => 'admin'],
+    'tags' => ['php', 'caster'],
 ];
 
 $id = Caster::fromArray($payload, 'id', [Caster::class, 'positiveInt']);
@@ -71,6 +101,11 @@ $meta = Caster::requiredNonEmptyArray(
     $payload['meta'] ?? null,
     'meta',
     static fn ($value) => Caster::string($value)
+);
+$tags = Caster::requiredNonEmptyList(
+    $payload['tags'] ?? null,
+    'tags',
+    static fn ($value) => Caster::nonEmptyTrimmedString($value)
 );
 ```
 
@@ -103,6 +138,19 @@ $maybeData = Caster::tryJson($payload['data']);    // ?array<string,mixed>
 ```
 
 You can pass `$assoc`, `$depth` and `$flags` just like `json_decode`.
+
+## Required Guards
+
+`Caster::required($value, 'field')` ensures a value is not `null`. For common cases you can use:
+
+```php
+$name = Caster::requiredNonEmptyString($payload['name'] ?? null, 'name', true);
+$options = Caster::requiredNonEmptyArray(
+    $payload['options'] ?? null,
+    'options',
+    static fn ($value) => Caster::string($value)
+);
+```
 
 ## Testing
 
