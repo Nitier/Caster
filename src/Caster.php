@@ -11,7 +11,7 @@ use Throwable;
 use Nitier\Caster\Exception\CastException;
 use Nitier\Caster\Exception\MissingValueException;
 
-final class Caster
+class Caster
 {
     private function __construct()
     {
